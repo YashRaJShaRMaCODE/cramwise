@@ -7,17 +7,17 @@ export const metadata: Metadata = {
     "A calm revision workspace for turning exam stress into small study sessions, clear subject progress, and useful notes.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Last-Minute Study — make the next hour count",
+    title: "Cramwise — make the next hour count",
     description:
       "Turn exam stress into small study sessions, clear subject progress, and useful notes.",
     url: "/",
-    siteName: "Last-Minute Study",
+    siteName: "Cramwise",
     locale: "en_IN",
     type: "website",
   },
   twitter: {
     card: "summary",
-    title: "Last-Minute Study — make the next hour count",
+    title: "Cramwise — make the next hour count",
     description: "A calmer way to plan your final revision sessions.",
   },
 };

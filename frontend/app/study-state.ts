@@ -67,6 +67,7 @@ export function calendarDaysUntil(examDate: string, today: number) {
 const priorities: TopicPriority[] = ["high", "medium", "low"];
 
 export function buildDailyPlan(subjects: Subject[], dailyBudget: number) {
+  if (!Number.isFinite(dailyBudget) || dailyBudget <= 0) return [];
   const rank: Record<TopicPriority, number> = { high: 0, medium: 1, low: 2 };
   const candidates = subjects.flatMap((subject) => subject.topics
     .filter((topic) => !topic.done)
@@ -81,8 +82,20 @@ export function buildDailyPlan(subjects: Subject[], dailyBudget: number) {
     minutes += topic.minutes;
     if (minutes >= dailyBudget) break;
   }
-  if (!plan.length && candidates[0]) plan.push(candidates[0]);
+  if (!plan.length && candidates[0]) plan.push({ ...candidates[0], minutes: Math.min(candidates[0].minutes, dailyBudget) });
   return plan;
+}
+
+export function buildDailyPlanCsv(plan: ReturnType<typeof buildDailyPlan>) {
+  const cell = (value: string | number) => {
+    const text = String(value);
+    const safe = /^[\s]*[=+@-]/.test(text) ? `'${text}` : text;
+    return `"${safe.replaceAll('"', '""')}"`;
+  };
+  return [
+    ["Subject", "Topic", "Minutes", "Priority"],
+    ...plan.map((topic) => [topic.subject, topic.title, topic.minutes, topic.priority]),
+  ].map((row) => row.map(cell).join(",")).join("\r\n");
 }
 
 export function localDateKey(timestamp: number) {
@@ -145,30 +158,46 @@ function makeId() {
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function uniqueId(candidate: string, used: Set<string>) {
+  const base = candidate.slice(0, 80) || makeId();
+  let id = base;
+  let suffix = 2;
+  while (used.has(id)) {
+    const suffixText = `-${suffix++}`;
+    id = `${base.slice(0, 80 - suffixText.length)}${suffixText}`;
+  }
+  used.add(id);
+  return id;
+}
+
 export function parseSavedState(snapshot: string): SavedState {
   try {
     const parsed = JSON.parse(snapshot) as Partial<SavedState> | null;
     if (!parsed || !Array.isArray(parsed.subjects)) return DEFAULT_STATE;
+    const subjectIds = new Set<string>();
     const subjects = parsed.subjects
       .filter((subject): subject is Subject => Boolean(subject && typeof subject.id === "string" && typeof subject.name === "string"))
       .slice(0, 12)
-      .map((subject, index) => ({
-        id: subject.id.slice(0, 80),
-        name: subject.name.slice(0, 48),
-        color: COLORS_BY_INDEX(index),
-        note: typeof subject.note === "string" ? subject.note.slice(0, 2000) : "",
-        topics: (Array.isArray(subject.topics) ? subject.topics : []).slice(0, 40).flatMap((topic) =>
-          topic && typeof topic.title === "string"
-            ? [{
-                id: String(topic.id || makeId()).slice(0, 80),
-                title: topic.title.slice(0, 100),
-                minutes: Math.min(120, Math.max(5, Number(topic.minutes) || 25)),
-                done: Boolean(topic.done),
-                priority: priorities.includes(topic.priority) ? topic.priority : "medium",
-              }]
-            : [],
-        ),
-      }));
+      .map((subject, index) => {
+        const topicIds = new Set<string>();
+        return {
+          id: uniqueId(subject.id, subjectIds),
+          name: subject.name.slice(0, 48),
+          color: COLORS_BY_INDEX(index),
+          note: typeof subject.note === "string" ? subject.note.slice(0, 2000) : "",
+          topics: (Array.isArray(subject.topics) ? subject.topics : []).slice(0, 40).flatMap((topic) =>
+            topic && typeof topic.title === "string"
+              ? [{
+                  id: uniqueId(String(topic.id || makeId()), topicIds),
+                  title: topic.title.slice(0, 100),
+                  minutes: Math.min(120, Math.max(5, Number(topic.minutes) || 25)),
+                  done: Boolean(topic.done),
+                  priority: priorities.includes(topic.priority) ? topic.priority : "medium",
+                }]
+              : [],
+          ),
+        };
+      });
     const examDate = isCalendarDate(parsed.examDate) ? parsed.examDate : "";
     return {
       subjects,

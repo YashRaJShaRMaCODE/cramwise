@@ -1,8 +1,12 @@
-# Last-Minute Study
+# Cramwise
 
 **One page. One next step. That’s enough.** A calm, local-first revision workspace that turns a large exam list into small sessions you can finish.
 
 **Live app:** <https://last-minute-study-board.onrender.com/>
+
+## Product direction
+
+The current release is a free, individual study planner that keeps plans and notes in the learner's browser. A paid path worth validating is a branded revision-planning setup for a tutoring or coaching provider. This build has no class workspaces, educator reporting, accounts, or billing, so it is not ready to be sold as a school subscription. Keep it as a public product demo until those needs and buyer demand are validated.
 
 ## Study tools
 

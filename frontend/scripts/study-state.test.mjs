@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildDailyPlan, calendarDaysUntil, currentStudyStreak, focusMinutesForDay, parseSavedState, recentStudyWeek, recordFocusSession } from "../app/study-state.ts";
+import { buildDailyPlan, buildDailyPlanCsv, calendarDaysUntil, currentStudyStreak, focusMinutesForDay, parseSavedState, recentStudyWeek, recordFocusSession } from "../app/study-state.ts";
 
 const parseDate = (examDate) => parseSavedState(JSON.stringify({ subjects: [], examDate })).examDate;
 
@@ -47,6 +47,23 @@ test("builds a priority-first daily plan within its time budget without completi
   assert.equal(state.subjects[0].topics.find((topic) => topic.id === "done").done, true);
 });
 
+test("caps an oversized fallback sprint at the daily budget without changing saved estimates", () => {
+  const subjects = [{ id: "math", name: "Math", color: "", note: "", topics: [
+    { id: "large", title: "Long topic", minutes: 90, done: false, priority: "high" },
+  ] }];
+  const plan = buildDailyPlan(subjects, 25);
+  assert.equal(plan[0].minutes, 25);
+  assert.equal(subjects[0].topics[0].minutes, 90);
+  assert.deepEqual(buildDailyPlan(subjects, 0), []);
+});
+
+test("exports a quoted daily plan and neutralizes spreadsheet formulas", () => {
+  const plan = buildDailyPlan([{ id: "math", name: "Math, Advanced", color: "", note: "", topics: [
+    { id: "x", title: '=IMPORT("bad")', minutes: 25, done: false, priority: "high" },
+  ] }], 25);
+  assert.equal(buildDailyPlanCsv(plan), '"Subject","Topic","Minutes","Priority"\r\n"Math, Advanced","\'=IMPORT(""bad"")","25","high"');
+});
+
 test("completed focus sessions update local study days and a consecutive streak only", () => {
   const state = parseSavedState(JSON.stringify({ subjects: [], focusSessions: 4, studyDays: ["2026-04-09"] }));
   const next = recordFocusSession(state, "2026-04-10");
@@ -81,4 +98,21 @@ test("migrates older backups and safely normalizes daily focus history", () => {
   ] }));
   assert.equal(focusMinutesForDay(restored, "2026-04-10"), 55);
   assert.equal(restored.focusMinutesByDay.length, 1);
+});
+
+test("repairs duplicate subject and topic ids in imported backups", () => {
+  const restored = parseSavedState(JSON.stringify({
+    subjects: [
+      { id: "same", name: "Math", topics: [{ id: "same-topic", title: "Algebra" }] },
+      { id: "same", name: "Science", topics: [
+        { id: "same-topic", title: "Cells" },
+        { id: "same-topic", title: "Energy" },
+      ] },
+    ],
+  }));
+
+  assert.equal(new Set(restored.subjects.map((subject) => subject.id)).size, 2);
+  for (const subject of restored.subjects) {
+    assert.equal(new Set(subject.topics.map((topic) => topic.id)).size, subject.topics.length);
+  }
 });

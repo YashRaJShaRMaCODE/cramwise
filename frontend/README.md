@@ -1,4 +1,4 @@
-# Last-Minute Study frontend
+# Cramwise frontend
 
 The Next.js App Router client for the local-first revision workspace. It includes the focus timer, priority-based daily plan, subject/topic planner, study streak, exam countdown, and private per-subject notes.
 

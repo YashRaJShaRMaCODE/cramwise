@@ -15,12 +15,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://last-minute-study-board.onrender.com"),
   title: {
-    default: "Last-Minute Study — make the next hour count",
-    template: "%s · Last-Minute Study",
+    default: "Cramwise — make the next hour count",
+    template: "%s · Cramwise",
   },
   description:
     "A calm revision workspace for planning short sessions, tracking subject progress, and keeping quick notes together.",
-  applicationName: "Last-Minute Study",
+  applicationName: "Cramwise",
   icons: { icon: "/icon.svg" },
   robots: { index: true, follow: true },
 };

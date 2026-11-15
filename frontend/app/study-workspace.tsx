@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ChangeEvent, type CSSProperties, type FormEvent } from "react";
-import { buildDailyPlan, calendarDaysUntil, currentStudyStreak, focusMinutesForDay, getServerStudySnapshot, getStudySnapshot, localDateKey, parseSavedState, recentStudyWeek, recordFocusSession, subscribeToStudyState, updateStudyState } from "./study-state";
+import { buildDailyPlan, buildDailyPlanCsv, calendarDaysUntil, currentStudyStreak, focusMinutesForDay, getServerStudySnapshot, getStudySnapshot, localDateKey, parseSavedState, recentStudyWeek, recordFocusSession, subscribeToStudyState, updateStudyState } from "./study-state";
 
 const COLORS = ["#584be1", "#e77953", "#258c76", "#bc5b90", "#397db4"];
 const STORAGE_WARNING = "Storage is unavailable. Changes stay here until this page reloads or closes.";
@@ -207,6 +207,17 @@ export default function StudyWorkspace() {
     setMessage("Study backup downloaded.");
   };
 
+  const downloadDailyPlan = () => {
+    const blob = new Blob(["\uFEFF", buildDailyPlanCsv(dailyPlan)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `cramwise-plan-${today === null ? "today" : localDateKey(today)}.csv`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    setMessage("Today's study plan downloaded as a CSV.");
+  };
+
   const restoreBackup = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = "";
@@ -300,9 +311,9 @@ export default function StudyWorkspace() {
   return (
     <main className="study-app">
       <header className="topbar">
-        <a className="brand" href="#overview" aria-label="Last-Minute Study home">
-          <span className="brand-icon" aria-hidden="true">L<span>.</span></span>
-          <span>last minute<span className="brand-study">study</span></span>
+        <a className="brand" href="#overview" aria-label="Cramwise home">
+          <span className="brand-icon" aria-hidden="true">C<span>.</span></span>
+          <span>cramwise</span>
         </a>
         <nav aria-label="Main navigation">
           <a href="#overview">Overview</a>
@@ -406,7 +417,7 @@ export default function StudyWorkspace() {
         {activeNote ? <div className="notes-paper"><div className="notes-toolbar"><label htmlFor="note-subject">For</label><select id="note-subject" value={activeNote.id} onChange={(event) => setSelectedNote(event.target.value)}>{subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select><span className="notes-count">{activeNote.note.length.toLocaleString()} / 2,000</span></div><textarea aria-label={`Quick notes for ${activeNote.name}`} value={activeNote.note} onChange={(event) => updateNote(event.target.value)} maxLength={2000} placeholder="Formulas, questions to revisit, or one thing you want to remember…" /><p className="notes-foot">Private to this browser. No account or cloud sync.</p></div> : <div className="notes-empty">Add a subject to start a quick note.</div>}
       </section>
 
-      <footer className="footer section-shell"><a className="brand" href="#overview"><span className="brand-icon" aria-hidden="true">L<span>.</span></span><span>last minute<span className="brand-study">study</span></span></a><p>Make the next session count. Let the rest wait.</p><div className="backup-actions"><button type="button" onClick={downloadBackup}>Download backup</button><button type="button" onClick={() => backupInput.current?.click()}>Restore backup</button><input ref={backupInput} type="file" accept="application/json,.json" hidden onChange={restoreBackup} /></div><button type="button" onClick={clearWorkspace}>Clear this browser’s study data</button><span className="privacy-line">Your plan and notes stay on this device.</span></footer>
+      <footer className="footer section-shell"><a className="brand" href="#overview" aria-label="Cramwise home"><span className="brand-icon" aria-hidden="true">C<span>.</span></span><span>cramwise</span></a><p>Make the next session count. Let the rest wait.</p><div className="backup-actions"><button type="button" onClick={downloadDailyPlan} disabled={!dailyPlan.length}>Export today’s plan</button><button type="button" onClick={downloadBackup}>Download backup</button><button type="button" onClick={() => backupInput.current?.click()}>Restore backup</button><input ref={backupInput} type="file" accept="application/json,.json" hidden onChange={restoreBackup} /></div><button type="button" onClick={clearWorkspace}>Clear this browser’s study data</button><span className="privacy-line">Your plan and notes stay on this device.</span></footer>
       <p className="sr-only" role="status" aria-live="polite">{message}</p>
     </main>
   );
