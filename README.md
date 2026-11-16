@@ -24,10 +24,12 @@ The current release is a free, individual study planner that keeps plans and not
 - Continue where you left off: subjects, progress, exam date, focus count, and notes are saved in this browser.
 - See a seven-day study strip and current streak based only on focus sessions you finish in the timer.
 - Track completed focus minutes per day and compare today's logged time with your exam-based daily target; older backups migrate without losing existing data.
-- Download a versioned JSON backup or restore it on another browser; the file stays on your device until you choose where to save it.
+- Download a versioned JSON backup or restore it on another browser; before replacing local data, restore shows the imported subject, topic and note counts for a final check.
 - Clear all local study data when you need a fresh start; this also stops and resets an active focus timer.
 
 The preview starts with sample subjects. Replace them with your own plan. There is no account, cloud sync, payment, or backend connection in the live app; browser data remains on the current device. If browser storage is blocked or full, edits stay in memory until the page is reloaded or closed.
+
+An optional research/pilot email signup appears only when `NEXT_PUBLIC_LEADHUB_URL` is set to the shared LeadHub HTTPS origin at build time. It collects email only after a separate opt-in checkbox; study subjects, progress, and notes are never submitted.
 
 ## Run locally
 
@@ -58,4 +60,8 @@ Next.js static export writes the deployable site to `frontend/out`. Render publi
 
 ## Privacy
 
-Study data is saved under `last-minute-study.v1` in browser local storage. It is not sent to a server. Do not use a shared device for private notes. **Clear this browser’s study data** removes the locally saved plan.
+Study data is saved under `last-minute-study.v1` in browser local storage. It is not sent to a server. Optional product recommendations require a separate checkbox and send only the product ID to LeadHub; study plans, notes, and usage activity stay on this device. Do not use a shared device for private notes. **Clear this browser’s study data** removes the locally saved plan.
+
+## Revenue and launch status
+
+The current product is a free individual browser app, with no account system or billing. A tutoring/coaching-provider offer remains a hypothesis that needs buyer interviews and a paid pilot before adding team features or checkout. The LeadHub form is an opt-in research channel, not a live paid offer.

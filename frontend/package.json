@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test:state": "node --experimental-strip-types --test scripts/study-state.test.mjs"
+    "test:state": "node --experimental-strip-types --test scripts/study-state.test.mjs scripts/related-products.test.mjs"
   },
   "dependencies": {
     "next": "16.4.5",

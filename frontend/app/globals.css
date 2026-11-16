@@ -212,6 +212,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .footer > p { margin: 0; color: #757b8d; font-size: 10px; }
 .footer > button { min-height: 38px; padding: 0 9px; border: 0; background: transparent; color: #757b8d; font-size: 9px; text-decoration: underline; text-underline-offset: 3px; }
 .footer > button:hover { color: var(--accent); }
+.lead-signup{display:grid;grid-template-columns:1fr minmax(280px,.8fr);align-items:center;gap:32px;margin-block:30px 42px;padding:26px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(120deg,#fff,#f1f0ff)}.lead-signup-copy .eyebrow{margin:0 0 8px;color:var(--accent);font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.lead-signup-copy h2{max-width:500px;margin:0;color:var(--ink);font-size:clamp(22px,3vw,32px);line-height:1.1;letter-spacing:-.055em}.lead-signup-copy>p:last-child{max-width:480px;margin:10px 0 0;color:var(--muted);font-size:11px;line-height:1.6}.lead-signup-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}.lead-signup-form>input{min-width:0;min-height:42px;padding:0 12px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);font-size:11px}.lead-signup-form>button{min-height:42px;padding:0 13px;display:inline-flex;align-items:center;gap:9px;border:0;border-radius:7px;background:var(--accent);color:#fff;font-size:10px;font-weight:750}.lead-signup-form>button:disabled{opacity:.6}.lead-signup-consent{grid-column:1/-1;display:flex;align-items:flex-start;gap:7px;color:var(--muted);font-size:9px}.lead-signup-consent input{accent-color:var(--accent)}.lead-signup-status{grid-column:1/-1;min-height:1.4em;margin:0;color:var(--accent-dark);font-size:10px}.lead-signup-honeypot{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
 .backup-actions { display: flex; align-items: center; gap: 6px; }
 .backup-actions button { min-height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--ink); font-size: 9px; }
 .backup-actions button:hover { border-color: #c9c4fa; background: var(--accent-soft); color: var(--accent); }
@@ -292,6 +293,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   .notes-heading h2 { font-size: 28px; }
   .notes-local { margin: 0 0 3px; font-size: 8px; }
   .notes-paper { min-height: 213px; padding: 12px; }
+  .lead-signup{grid-template-columns:1fr;gap:18px;padding:20px}.lead-signup-form{grid-template-columns:1fr}.lead-signup-consent,.lead-signup-status{grid-column:1}.lead-signup-form>button{justify-content:center}
   .footer { grid-template-columns: 1fr auto; gap: 10px 5px; padding-top: 21px; padding-bottom: 18px; }
   .footer > p { grid-column: 1/-1; grid-row: 2; }
   .footer > button { grid-column: 2; grid-row: 1; font-size: 8px; }
@@ -302,3 +304,4 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+.lead-signup-recommendations{grid-column:1/-1;color:var(--muted);font-size:12px}.lead-signup-recommendations h3{margin:8px 0;color:var(--ink);font-size:14px}.lead-signup-recommendations ul{display:grid;gap:8px;padding-left:18px}.lead-signup-recommendations a{color:var(--ink);font-weight:700;text-underline-offset:3px}
