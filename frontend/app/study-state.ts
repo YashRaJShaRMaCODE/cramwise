@@ -2,6 +2,7 @@ export type TopicPriority = "high" | "medium" | "low";
 export type Topic = { id: string; title: string; minutes: number; done: boolean; priority: TopicPriority };
 export type Subject = { id: string; name: string; color: string; topics: Topic[]; note: string };
 export type SavedState = { subjects: Subject[]; examDate: string; focusSessions: number; studyDays: string[]; focusMinutesByDay: { date: string; minutes: number }[] };
+export const STUDY_BACKUP_FORMAT = "last-minute-study-backup";
 
 const STORAGE_KEY = "last-minute-study.v1";
 const COLORS = ["#584be1", "#e77953", "#258c76", "#bc5b90", "#397db4"];
@@ -218,6 +219,21 @@ export function parseSavedState(snapshot: string): SavedState {
   } catch {
     return DEFAULT_STATE;
   }
+}
+
+export function readStudyBackup(value: unknown): SavedState | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const backup = value as Record<string, unknown>;
+  if (backup.format !== STUDY_BACKUP_FORMAT || backup.version !== 1 || !backup.state || typeof backup.state !== "object" || Array.isArray(backup.state)) return null;
+  const state = backup.state as Record<string, unknown>;
+  if (!Array.isArray(state.subjects)) return null;
+  return parseSavedState(JSON.stringify(state));
+}
+
+export function summarizeStudyBackup(state: SavedState) {
+  const topics = state.subjects.reduce((count, subject) => count + subject.topics.length, 0);
+  const notes = state.subjects.filter((subject) => subject.note.length > 0).length;
+  return `${state.subjects.length} subject${state.subjects.length === 1 ? "" : "s"}, ${topics} topic${topics === 1 ? "" : "s"}, ${notes} note${notes === 1 ? "" : "s"}`;
 }
 
 export function getStudySnapshot() {

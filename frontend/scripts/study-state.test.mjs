@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildDailyPlan, buildDailyPlanCsv, calendarDaysUntil, currentStudyStreak, focusMinutesForDay, parseSavedState, recentStudyWeek, recordFocusSession } from "../app/study-state.ts";
+import { buildDailyPlan, buildDailyPlanCsv, calendarDaysUntil, currentStudyStreak, focusMinutesForDay, parseSavedState, readStudyBackup, recentStudyWeek, recordFocusSession, summarizeStudyBackup } from "../app/study-state.ts";
 
 const parseDate = (examDate) => parseSavedState(JSON.stringify({ subjects: [], examDate })).examDate;
 
@@ -115,4 +115,19 @@ test("repairs duplicate subject and topic ids in imported backups", () => {
   for (const subject of restored.subjects) {
     assert.equal(new Set(subject.topics.map((topic) => topic.id)).size, subject.topics.length);
   }
+});
+
+test("validates versioned study backups and summarizes replacement contents", () => {
+  const backup = {
+    format: "last-minute-study-backup",
+    version: 1,
+    state: { subjects: [{ id: "math", name: "Math", note: "Review", topics: [{ id: "algebra", title: "Algebra" }] }] },
+  };
+  const state = readStudyBackup(backup);
+
+  assert.ok(state);
+  assert.equal(summarizeStudyBackup(state), "1 subject, 1 topic, 1 note");
+  assert.equal(readStudyBackup({ ...backup, version: 2 }), null);
+  assert.equal(readStudyBackup({ ...backup, state: { subjects: "not a list" } }), null);
+  assert.equal(readStudyBackup(null), null);
 });

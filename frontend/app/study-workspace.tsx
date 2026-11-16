@@ -1,16 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ChangeEvent, type CSSProperties, type FormEvent } from "react";
-import { buildDailyPlan, buildDailyPlanCsv, calendarDaysUntil, currentStudyStreak, focusMinutesForDay, getServerStudySnapshot, getStudySnapshot, localDateKey, parseSavedState, recentStudyWeek, recordFocusSession, subscribeToStudyState, updateStudyState } from "./study-state";
+import { buildDailyPlan, buildDailyPlanCsv, calendarDaysUntil, currentStudyStreak, focusMinutesForDay, getServerStudySnapshot, getStudySnapshot, localDateKey, parseSavedState, readStudyBackup, recentStudyWeek, recordFocusSession, STUDY_BACKUP_FORMAT, subscribeToStudyState, summarizeStudyBackup, updateStudyState } from "./study-state";
 
 const COLORS = ["#584be1", "#e77953", "#258c76", "#bc5b90", "#397db4"];
 const STORAGE_WARNING = "Storage is unavailable. Changes stay here until this page reloads or closes.";
-const BACKUP_FORMAT = "last-minute-study-backup";
 type FocusTarget = { subject: string; title: string; minutes: number };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function newId() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -197,7 +192,7 @@ export default function StudyWorkspace() {
 
   const downloadBackup = () => {
     const date = new Date().toISOString().slice(0, 10);
-    const backup = { format: BACKUP_FORMAT, version: 1, exportedAt: new Date().toISOString(), state: saved };
+    const backup = { format: STUDY_BACKUP_FORMAT, version: 1, exportedAt: new Date().toISOString(), state: saved };
     const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }));
     const link = document.createElement("a");
     link.href = url;
@@ -234,13 +229,13 @@ export default function StudyWorkspace() {
       setMessage("This file is not a readable study backup.");
       return;
     }
-    if (!isRecord(candidate) || candidate.format !== BACKUP_FORMAT || candidate.version !== 1 || !isRecord(candidate.state) || !Array.isArray(candidate.state.subjects)) {
+    const restored = readStudyBackup(candidate);
+    if (!restored) {
       setMessage("This file is not a supported study backup.");
       return;
     }
-    if (!window.confirm("Restore this backup and replace the study plan currently saved in this browser?")) return;
+    if (!window.confirm(`This backup contains ${summarizeStudyBackup(restored)}. Restoring it replaces the study data currently saved in this browser. Continue?`)) return;
 
-    const restored = parseSavedState(JSON.stringify(candidate.state));
     deadlineRef.current = null;
     focusTargetRef.current = null;
     setFocusTarget(null);
