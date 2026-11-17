@@ -171,6 +171,58 @@ function uniqueId(candidate: string, used: Set<string>) {
   return id;
 }
 
+export function mergeImportedTopics(state: SavedState, items: { subject: string; title: string; minutes: number; priority: TopicPriority }[]) {
+  if (!items.length) return state;
+  const subjects = state.subjects.map((subject) => ({ ...subject, topics: [...subject.topics] }));
+  const subjectIds = new Set(subjects.map((subject) => subject.id));
+  const subjectIndexes = new Map<string, number>();
+  const topicTitles = new Map<string, Set<string>>();
+  const topicIds = new Map<string, Set<string>>();
+  for (const [index, subject] of subjects.entries()) {
+    const key = subject.name.trim().toLowerCase();
+    if (!subjectIndexes.has(key)) subjectIndexes.set(key, index);
+    if (!topicTitles.has(key)) topicTitles.set(key, new Set());
+    if (!topicIds.has(key)) topicIds.set(key, new Set());
+    for (const topic of subject.topics) {
+      topicTitles.get(key)!.add(topic.title.trim().toLowerCase());
+      topicIds.get(key)!.add(topic.id);
+    }
+  }
+
+  for (const item of items) {
+    const key = item.subject.trim().toLowerCase();
+    let subjectIndex = subjectIndexes.get(key);
+    if (subjectIndex === undefined) {
+      if (subjects.length >= 12) continue;
+      subjectIndex = subjects.length;
+      subjectIndexes.set(key, subjectIndex);
+      subjects.push({
+        id: uniqueId(makeId(), subjectIds),
+        name: item.subject,
+        color: COLORS_BY_INDEX(subjectIndex),
+        topics: [],
+        note: "",
+      });
+      topicTitles.set(key, new Set());
+      topicIds.set(key, new Set());
+    }
+
+    const subject = subjects[subjectIndex];
+    const title = item.title.trim();
+    const titleKey = title.toLowerCase();
+    if (subject.topics.length >= 40 || topicTitles.get(key)!.has(titleKey)) continue;
+    subject.topics.push({
+      id: uniqueId(makeId(), topicIds.get(key)!),
+      title,
+      minutes: item.minutes,
+      done: false,
+      priority: item.priority,
+    });
+    topicTitles.get(key)!.add(titleKey);
+  }
+  return { ...state, subjects };
+}
+
 export function parseSavedState(snapshot: string): SavedState {
   try {
     const parsed = JSON.parse(snapshot) as Partial<SavedState> | null;

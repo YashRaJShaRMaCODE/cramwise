@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildDailyPlan, buildDailyPlanCsv, calendarDaysUntil, currentStudyStreak, focusMinutesForDay, parseSavedState, readStudyBackup, recentStudyWeek, recordFocusSession, summarizeStudyBackup } from "../app/study-state.ts";
+import { buildDailyPlan, buildDailyPlanCsv, calendarDaysUntil, currentStudyStreak, focusMinutesForDay, mergeImportedTopics, parseSavedState, readStudyBackup, recentStudyWeek, recordFocusSession, summarizeStudyBackup } from "../app/study-state.ts";
+import { previewSyllabusCsv } from "../app/syllabus-import.ts";
 
 const parseDate = (examDate) => parseSavedState(JSON.stringify({ subjects: [], examDate })).examDate;
 
@@ -130,4 +131,60 @@ test("validates versioned study backups and summarizes replacement contents", ()
   assert.equal(readStudyBackup({ ...backup, version: 2 }), null);
   assert.equal(readStudyBackup({ ...backup, state: { subjects: "not a list" } }), null);
   assert.equal(readStudyBackup(null), null);
+});
+
+test("previews quoted syllabus CSV, defaults blank priorities, and skips existing and repeated topics", () => {
+  const state = parseSavedState(JSON.stringify({ subjects: [{ id: "math", name: "Math", topics: [{ id: "existing", title: "Existing topic" }] }] }));
+  const csv = [
+    "Subject,Topic,Minutes,Priority",
+    'Math,"Limits, continuity",25,high',
+    "Chemistry,Bonding,15,",
+    'Math,"limits, continuity",25,high',
+    "Math,Existing topic,20,low",
+    "Math,Too short,2,high",
+    "Math,Extra columns,20,high,ignored",
+  ].join("\r\n");
+  const preview = previewSyllabusCsv(csv, state.subjects);
+
+  assert.deepEqual(preview.items.map(({ subject, title, priority }) => [subject, title, priority]), [
+    ["Math", "Limits, continuity", "high"],
+    ["Chemistry", "Bonding", "medium"],
+  ]);
+  assert.equal(preview.duplicates, 2);
+  assert.equal(preview.invalidRows, 2);
+  assert.match(preview.issues[1], /four columns/);
+});
+
+test("rejects malformed headers, malformed quotes, oversized files, and excessive rows", () => {
+  const empty = [];
+  assert.match(previewSyllabusCsv("Subject,Topic\nMath,Algebra", empty).error, /columns in order/);
+  assert.match(previewSyllabusCsv('Subject,Topic,Minutes,Priority\nMath,"Broken,20,high', empty).error, /format is invalid/);
+  assert.match(previewSyllabusCsv("x".repeat(1_000_001), empty).error, /1 MB/);
+  const rows = ["Subject,Topic,Minutes,Priority", ...Array.from({ length: 501 }, (_, index) => `S,Topic ${index},20,medium`)];
+  assert.match(previewSyllabusCsv(rows.join("\n"), empty).error, /500 topic rows/);
+});
+
+test("enforces subject and topic caps during preview and merge", () => {
+  const fullSubjects = Array.from({ length: 12 }, (_, index) => ({
+    id: `subject-${index}`,
+    name: `Subject ${index}`,
+    color: "",
+    topics: Array.from({ length: index === 0 ? 40 : 0 }, (_, topic) => ({
+      id: `topic-${topic}`, title: `Existing ${topic}`, minutes: 25, done: false, priority: "medium",
+    })),
+    note: "",
+  }));
+  const csv = ["Subject,Topic,Minutes,Priority", "Subject 0,Another,25,high", "New subject,First,25,low"].join("\n");
+  const preview = previewSyllabusCsv(csv, fullSubjects);
+  assert.equal(preview.items.length, 0);
+  assert.equal(preview.invalidRows, 2);
+
+  const merged = mergeImportedTopics(parseSavedState(JSON.stringify({ subjects: [{ id: "math", name: "Math", note: "Keep this", topics: [{ id: "done", title: "Done topic", done: true }] }] })), [
+    { subject: "Math", title: "New topic", minutes: 30, priority: "high" },
+    { subject: "Science", title: "Cells", minutes: 20, priority: "medium" },
+  ]);
+  assert.equal(merged.subjects[0].note, "Keep this");
+  assert.equal(merged.subjects[0].topics[0].done, true);
+  assert.deepEqual(merged.subjects.map((subject) => [subject.name, subject.topics.length]), [["Math", 2], ["Science", 1]]);
+  assert.equal(new Set(merged.subjects.map((subject) => subject.id)).size, 2);
 });

@@ -13,6 +13,7 @@ The current release is a free, individual study planner that keeps plans and not
 - Set an exam date and see a live day countdown.
 - Add up to 12 subjects, search by subject or topic, and build each list from small revision sessions.
 - Set each new topic's estimate from 5 to 120 minutes; its focus timer uses that same estimate.
+- Import a CSV syllabus after previewing valid rows, duplicates, and errors; only confirmed topics are added, on this device.
 - Mark topics high, normal, or low priority; older backups keep working and default to normal priority.
 - Check off topics and see progress update immediately.
 - See the estimated minutes left for each subject and across the whole plan.

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ChangeEvent, type CSSProperties, type FormEvent } from "react";
-import { buildDailyPlan, buildDailyPlanCsv, calendarDaysUntil, currentStudyStreak, focusMinutesForDay, getServerStudySnapshot, getStudySnapshot, localDateKey, parseSavedState, readStudyBackup, recentStudyWeek, recordFocusSession, STUDY_BACKUP_FORMAT, subscribeToStudyState, summarizeStudyBackup, updateStudyState } from "./study-state";
+import { buildDailyPlan, buildDailyPlanCsv, calendarDaysUntil, currentStudyStreak, focusMinutesForDay, getServerStudySnapshot, getStudySnapshot, localDateKey, mergeImportedTopics, parseSavedState, readStudyBackup, recentStudyWeek, recordFocusSession, STUDY_BACKUP_FORMAT, subscribeToStudyState, summarizeStudyBackup, updateStudyState } from "./study-state";
+import { previewSyllabusCsv, type SyllabusImportPreview } from "./syllabus-import";
 import { LeadHubSignup } from "./leadhub-signup";
 
 const COLORS = ["#584be1", "#e77953", "#258c76", "#bc5b90", "#397db4"];
@@ -31,6 +32,7 @@ export default function StudyWorkspace() {
   const [topicDrafts, setTopicDrafts] = useState<Record<string, string>>({});
   const [topicMinuteDrafts, setTopicMinuteDrafts] = useState<Record<string, string>>({});
   const [newSubject, setNewSubject] = useState("");
+  const [syllabusImport, setSyllabusImport] = useState<{ csv: string; preview: SyllabusImportPreview } | null>(null);
   const [seconds, setSeconds] = useState(25 * 60);
   const [timerRunning, setTimerRunning] = useState(false);
   const [focusTarget, setFocusTarget] = useState<FocusTarget | null>(null);
@@ -41,6 +43,7 @@ export default function StudyWorkspace() {
   const deadlineRef = useRef<number | null>(null);
   const focusTargetRef = useRef<FocusTarget | null>(null);
   const backupInput = useRef<HTMLInputElement>(null);
+  const syllabusInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let timeout = 0;
@@ -142,6 +145,39 @@ export default function StudyWorkspace() {
     setSelectedNote(subject.id);
     setNewSubject("");
     announceSave(saved, `${name} added to your revision list.`);
+  };
+
+  const previewSyllabus = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) return;
+    if (file.size > 1_000_000) {
+      setSyllabusImport({ csv: "", preview: { items: [], invalidRows: 0, duplicates: 0, issues: [], error: "CSV files must be 1 MB or smaller." } });
+      return;
+    }
+    try {
+      const csv = await file.text();
+      setSyllabusImport({ csv, preview: previewSyllabusCsv(csv, subjects) });
+    } catch {
+      setSyllabusImport({ csv: "", preview: { items: [], invalidRows: 0, duplicates: 0, issues: [], error: "This file could not be read." } });
+    }
+  };
+
+  const applySyllabusImport = () => {
+    if (!syllabusImport || syllabusImport.preview.error || !syllabusImport.preview.items.length) return;
+    const preview = previewSyllabusCsv(syllabusImport.csv, subjects);
+    if (preview.error || !preview.items.length) {
+      setSyllabusImport({ csv: syllabusImport.csv, preview });
+      return;
+    }
+    const persisted = updateStudyState((current) => mergeImportedTopics(current, preview.items));
+    const summary = [
+      `Added ${preview.items.length} topics`,
+      preview.duplicates ? `${preview.duplicates} duplicate${preview.duplicates === 1 ? "" : "s"} skipped` : "",
+      preview.invalidRows ? `${preview.invalidRows} invalid row${preview.invalidRows === 1 ? "" : "s"} skipped` : "",
+    ].filter(Boolean).join("; ");
+    setSyllabusImport(null);
+    announceSave(persisted, `${summary}.`);
   };
 
   const addTopic = (event: FormEvent<HTMLFormElement>, subjectId: string) => {
@@ -386,6 +422,17 @@ export default function StudyWorkspace() {
           <form className="add-subject" onSubmit={addSubject}>
             <span className="add-mark" aria-hidden="true">+</span><label htmlFor="new-subject">Add a subject to your sprint</label><input id="new-subject" value={newSubject} onChange={(event) => setNewSubject(event.target.value)} maxLength={48} placeholder="e.g. Chemistry" disabled={subjects.length >= 12} /><button type="submit" disabled={!newSubject.trim() || subjects.length >= 12}>Add subject <span aria-hidden="true">↗</span></button>
           </form>
+          <div className="syllabus-import">
+            <div><strong>Already have a syllabus?</strong><p>Use Subject, Topic, Minutes, Priority columns. Blank priority defaults to medium; your file stays on this device.</p></div>
+            <button type="button" onClick={() => syllabusInput.current?.click()}>Choose CSV</button>
+            <input id="syllabus-csv" ref={syllabusInput} type="file" accept=".csv,text/csv" hidden onChange={previewSyllabus} aria-label="Choose syllabus CSV" />
+          </div>
+          {syllabusImport && <section className="syllabus-preview" aria-labelledby="syllabus-preview-title">
+            <div><h3 id="syllabus-preview-title">Import preview</h3><p role="status">{syllabusImport.preview.error || `${syllabusImport.preview.items.length} valid topics ready to add${syllabusImport.preview.duplicates ? ` · ${syllabusImport.preview.duplicates} duplicate${syllabusImport.preview.duplicates === 1 ? "" : "s"} will be skipped` : ""}${syllabusImport.preview.invalidRows ? ` · ${syllabusImport.preview.invalidRows} invalid row${syllabusImport.preview.invalidRows === 1 ? "" : "s"} will be skipped` : ""}`}</p></div>
+            {syllabusImport.preview.items.length > 0 && <ul>{syllabusImport.preview.items.slice(0, 5).map((item, index) => <li key={`${item.subject}-${item.title}-${index}`}><strong>{item.subject}</strong><span>{item.title} · {item.minutes} min · {item.priority}</span></li>)}</ul>}
+            {syllabusImport.preview.issues.length > 0 && <ul className="syllabus-issues">{syllabusImport.preview.issues.map((issue) => <li key={issue}>{issue}</li>)}</ul>}
+            <div className="syllabus-preview-actions"><button type="button" onClick={applySyllabusImport} disabled={!syllabusImport.preview.items.length || Boolean(syllabusImport.preview.error)}>Add {syllabusImport.preview.items.length} valid topics</button><button type="button" onClick={() => setSyllabusImport(null)}>Cancel</button></div>
+          </section>}
           <div className="subject-grid">
             {visibleSubjects.map((subject, index) => {
               const done = subject.topics.filter((topic) => topic.done).length;
